@@ -1,4 +1,7 @@
 HTML5 File / FileSystem API Samples
+(Runs only in Chrome)
+
+* editor: Simple image editor using File API + Canvas
 
 Resources:
   http://dev.w3.org/2006/webapi/FileAPI/
