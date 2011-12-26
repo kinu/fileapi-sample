@@ -1,0 +1,65 @@
+<head>
+  <style type="text/css">
+  body {
+    font-family: Arial, Helvetica, sans-serif;
+    color: #222;
+    width: 80%;
+  }
+  div {
+    line-height: 20px;
+    margin: 10px 0;
+  }
+  </style>
+</head>
+<h2>FileSystem API Dragout Sample</h2>
+
+<div style="color: #999">
+  HTML5 FileSystem drag-out sample code
+  (Runs on Chrome only as of writing)
+</div>
+
+<div>Try drag out this link: <a id="out_anchor"></a></div>
+
+<div style="color: #a60">
+  Want to browse into the HTML5 FileSystem or purge data more easily?<br />
+  Check out
+  <a href="https://chrome.google.com/webstore/detail/nhnjmpbdkieehidddbaeajffijockaea">Peephole extension</a> on Chrome WebStore!
+</div>
+
+<script>
+function log(msg) {
+  document.getElementById('log').innerHTML += msg + '<br/>';
+}
+
+function error(e) {
+  log("Got error: " + e.code);
+}
+
+webkitRequestFileSystem(window.TEMPORARY, 1024,
+  function(fs) {
+    fs.root.getFile('dragtest.txt', {create:true}, function(entry) {
+      // Prepares the file to be drag-out.
+      entry.createWriter(
+        function(fileWriter) {
+          var bb = new WebKitBlobBuilder;
+          bb.append('Test data for dragout.\n');
+          var blob = bb.getBlob('text/plain');
+
+          fileWriter.onwriteend = donePreparation.bind(this, entry);
+          fileWriter.onerror = error;
+          fileWriter.write(blob);
+        });
+    }, error);
+  }, error);
+
+function donePreparation(entry) {
+  var a = document.getElementById('out_anchor');
+  a.setAttribute('href', entry.toURL());
+  a.innerText = entry.name;
+  a.addEventListener('dragstart', function(ev) {
+    var downloadURL = 'text/plain:' + entry.name + ':' + entry.toURL();
+    ev.dataTransfer.setData('DownloadURL', downloadURL);
+  });
+}
+
+</script>

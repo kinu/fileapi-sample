@@ -1,0 +1,86 @@
+<head>
+  <style type="text/css">
+  body {
+    font-family: Arial, Helvetica, sans-serif;
+    color: #222;
+    width: 80%;
+  }
+  div {
+    line-height: 20px;
+    margin: 10px 0;
+  }
+  </style>
+</head>
+<h2>FileSystem / FileWriter API Sample</h2>
+
+<div style="color: #999">
+  HTML5 FileSystem and FileWriter API  sample code
+  (Runs on Chrome only as of writing)
+</div>
+
+<div id="log"></div>
+
+<div style="color: #a60">
+  Want to browse into the HTML5 FileSystem or purge data more easily?<br />
+  Check out
+  <a href="https://chrome.google.com/webstore/detail/nhnjmpbdkieehidddbaeajffijockaea">Peephole extension</a> on Chrome WebStore!
+</div>
+
+<script>
+function log(msg) {
+  document.getElementById('log').innerHTML += msg + '<br/>';
+}
+
+function error(e) {
+  log("Got error: " + e.code);
+}
+
+var filesystem;
+
+log('1. Requesting FileSystem (TEMPORARY).');
+webkitRequestFileSystem(window.TEMPORARY, 1024,
+  function(fs) {
+    log('=> SUCCESS: Got filesystem:' + fs.name);
+    filesystem = fs;
+
+    log('2. Creating (or getting) a directory entry: /tmp');
+    fs.root.getDirectory('tmp', {create:true}, didGetDirectory, error);
+  }, error);
+
+function didGetDirectory(dir) {
+  log('=> SUCCESS: Got directory:' + dir.fullPath);
+  log('3. Creating (or getting) a file entry under /tmp: test.txt');
+  dir.getFile('test.txt', {create:true}, didGetFile, error);
+}
+
+function didGetFile(entry) {
+  log('=> SUCCESS: Got file:' + entry.fullPath);
+  log('4. Getting a FileWriter for the file and writing into it.');
+  entry.createWriter(
+      function(fileWriter) {
+        log('=> SUCCESS: Got FileWriter for ' + entry.fullPath);
+        log('5. Writing text data into the file.');
+
+        // Creates a new blob with BlobBuilder.
+        var bb = new WebKitBlobBuilder;
+        bb.append('This is test data.\n');
+        bb.append('You can append string, another blob or ArrayBuffer here.');
+        var blob = bb.getBlob('text/plain');
+
+        // Set up FileWriter callbacks.
+        fileWriter.onwriteend = didWriteFile.bind(this, entry);
+        fileWriter.onerror = error;
+        fileWriter.write(blob);
+      }, error);
+}
+
+function didWriteFile(entry, ev) {
+  log('=> DONE: Writen ' + ev.total + ' bytes into <a href="' +
+      entry.toURL() + '">' + entry.toURL() + '</a>');
+  log('');
+  log('Resulting filesystem image can be checked at: ' +
+      '<a href="' + filesystem.root.toURL() + '">' +
+      filesystem.root.toURL() + '</a>');
+}
+
+</script>
