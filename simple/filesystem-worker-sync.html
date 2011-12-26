@@ -1,0 +1,21 @@
+<html>
+<body>
+<h2>FileSystem test (worker)</h2>
+<pre id="log"></pre>
+
+<script>
+var logElem = document.getElementById("log");
+function log(msg) {
+  logElem.innerHTML += msg + "\n";
+}
+
+var worker = new Worker("filesystem-worker-sync.js");
+worker.onmessage = function(event) { log("Worker responded: " + event.data); };
+worker.onerror = function(error) { alert(error); };
+
+log("Started worker " + worker);
+worker.postMessage("start\n");
+
+</script>
+</body>
+</html>
