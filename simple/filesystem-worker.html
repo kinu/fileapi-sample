@@ -16,9 +16,6 @@ worker.onerror = function(error) { alert(error); };
 log("Started worker " + worker);
 worker.postMessage("start\n");
 
-if (!this.webkitRequestFileSystem)
-    log("MAIN: FileSystem not supported.");
-
 </script>
 </body>
 </html>

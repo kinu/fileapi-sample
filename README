@@ -1,5 +1,5 @@
 HTML5 File / FileSystem API Samples
-(Runs only in Chrome)
+(Runs only on Chrome)
 
 * simple: Random samples
 * editor: Simple image editor using File API + Canvas

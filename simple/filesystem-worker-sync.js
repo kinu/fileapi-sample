@@ -3,10 +3,8 @@ onmessage = function(event) {
   var fs = webkitRequestFileSystemSync(TEMPORARY, 100);
   postMessage("Got file system: " + fs.name);
 
-  var flags = new Flags;
-  flags.create = true;
   postMessage("root: " + fs.root.fullPath);
-  var entry = fs.root.getFile('tmp.txt', flags);
+  var entry = fs.root.getFile('tmp.txt', {create:true});
   postMessage("entry: " + entry.fullPath);
   postMessage("entry: " + entry.isFile);
 

@@ -1,0 +1,42 @@
+<head>
+  <style type="text/css">
+  body {
+    font-family: Arial, Helvetica, sans-serif;
+    color: #222;
+    width: 80%;
+  }
+  div {
+    line-height: 20px;
+    margin: 10px 0;
+  }
+  </style>
+  <script type="text/javascript">
+    document.addEventListener('DOMContentLoaded', function() {
+      var a = document.getElementById('filesystem_url_out');
+      a.setAttribute('href', 'filesystem:' + window.location.protocol + '//' +
+                     window.location.host + '/temporary/');
+    });
+  </script>
+</head>
+<h2>FileSystem / FileWriter API Sample Code</h2>
+
+<div style="color: #999">
+  HTML5 FileSystem and FileWriter API  sample code
+  (Runs on Chrome only as of writing)
+</div>
+
+<ul>
+  <li> <a href="filesystem-basic.html">Basic</a>
+  <li> <a href="filesystem-dragout.html">FileSystem API + dragout</a>
+  <li> <a href="filesystem-worker.html">FileSystem API in Worker</a>
+  <li> <a href="filesystem-worker-sync.html">Synchronous FileSystem API</a>
+</ul>
+
+<div>Check out <a id="filesystem_url_out">here</a> to see what you got in your Sandboxed FileSystem by running the above sample code. (NOTE: Don't worry, the data written into your disk <span style="color:#900">will be automatically deleted</span> when your disk space is getting tight!)</div>
+
+<div style="color: #a60">
+  Want to browse into the HTML5 FileSystem or purge data more easily?<br />
+  Check out
+  <a href="https://chrome.google.com/webstore/detail/nhnjmpbdkieehidddbaeajffijockaea">Peephole extension</a> on Chrome WebStore!
+</div>
+

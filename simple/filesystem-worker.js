@@ -13,17 +13,15 @@ function successCallback(e) {
 
 function getFileSystem(fs) {
   postMessage("Got file system: " + fs.name);
-  flags = new Flags;
-  flags.create = true;
-  fs.root.getFile('tmp.txt', flags, successCallback, error);
-  fs.root.getFile('tmp2.txt', flags, successCallback, error);
+  fs.root.getFile('tmp.txt', {create:true}, successCallback, error);
+  fs.root.getFile('tmp2.txt', {create:true}, successCallback, error);
 }
 
 onmessage = function(event) {
-  if (!this.requestFileSystem)
+  if (!this.webkitRequestFileSystem)
     postMessage("WORKER: FileSystem not supported.");
   else
-    requestFileSystem(TEMPORARY, 100, getFileSystem, error);
+    webkitRequestFileSystem(TEMPORARY, 100, getFileSystem, error);
 };
 
 onerror = function(e) {
