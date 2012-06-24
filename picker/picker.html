@@ -1,0 +1,455 @@
+<!DOCTYPE html>
+<link rel="stylesheet" href="picker.css">
+<body>
+
+<h2>HTML5-based folder picker demo</h2>
+
+<div class="description">
+<p>
+  Try <b>drag-and-drop any numbers of files/folders into the drop area</b>
+  below, and you will see a neat file tree with a preview pain to refine your selection.
+  <br />
+  Don't worry, dropping a folder which contains millions of files
+  won't make your browser get stuck!  (You can click 'stop scanning' to stop
+  scanning)
+  <br />
+  (NOTE: this page is just for demo and selected files/folders are <b>not uploaded to anywhere</b>)
+  </p>
+  <p> More info:
+  <a href="http://wiki.whatwg.org/wiki/DragAndDropEntries">http://wiki.whatwg.org/wiki/DragAndDropEntries</a>
+  </p>
+  <p class="bold">This page requires Chrome 21 or later.</p>
+</div>
+
+<div id="droptarget">Drop your Photos folder(s) here</div>
+<div id="message" class="hide"></div>
+
+<div id="summary">
+  <div>
+    <span class="bold">Selected files:</span> <span id="selected-files">0</span> /
+    <span class="bold">Selected size:</span> <span id="selected-size">0</span>
+    (<span class="bold">Total files:</span> <span id="total-files">0</span> /
+    <span class="bold">Total size:</span> <span id="total-size">0</span>)
+    <div id="stop-button" class="hide button clickable">Stop Scanning</div>
+    <div id="resume-button" class="hide button clickable">Resume Scanning</div>
+  </div>
+  <div>
+    <input type="button" id="select-all" value="Select all">
+    <input type="button" id="select-none" value="Select none">
+    <input type="checkbox" id="image-only" checked><label>Images only</label>
+  </div>
+</div>
+
+<div id="content" class="hide"></div>
+<ul id="file-list-body" class="hide"></ul>
+
+<script>
+var totalFiles = 0, totalSize = 0, selectedFiles = 0, selectedSize = 0, imageFiles = 0, imageSize = 0;
+var entriesToScan = [], pendingEntries = 0;
+var scanStopped = false, scanFinished = false;
+var selectAll = true, selectedList = {};
+var autoExpandLevel = 1;
+
+var imageOnly = document.getElementById('image-only');
+var droptarget = document.getElementById('droptarget');
+
+droptarget.addEventListener('dragover', function(e) {
+  e.stopPropagation();
+  e.preventDefault();
+}, false);
+
+droptarget.addEventListener('drop', function(e) {
+  e.stopPropagation();
+  e.preventDefault();
+
+  totalFiles = totalSize = imageFiles = imageSize = 0;
+  selectedFiles = selectedSize = 0;
+
+  var entries = getItemEntries(e);
+  if (!entries.length)
+    return;
+
+  scanStopped = scanFinished = false;
+  enableCancelScanning();
+  startScanEntries();
+
+  var list = document.getElementById('file-list-body');
+  list.classList.remove('hide');
+  list.innerHTML = '';
+  for (var i = 0; i < entries.length; i++)
+    createEntryHTML(list, entries[i], entries[i].fileCache, 0);
+  document.getElementById('content').innerHTML = '';
+}, false);
+
+function getEntryFile(entry, callback) {
+  entry.file(function(file) {
+    file.isImage = (file.type && file.type.substring(0, 6) == 'image/');
+    file.size = file.size;
+    callback(file);
+  }, errorCallback('file() failed for ' + entry.fullPath));
+}
+
+function showError(msg) {
+  var message = document.getElementById('message');
+  message.classList.add('error');
+  message.classList.remove('hide');
+  message.innerText = msg;
+}
+
+function errorCallback(msg) {
+  return function(e) {
+    showError('ERROR:' + msg + ' ' + e.code);
+    console.log(console, msg, e);
+  };
+}
+
+function getItemEntries(e) {
+  var items = e.dataTransfer.items;
+  var entries = [];
+  for (var i = 0; i < items.length; ++i) {
+    if (items[i].kind != 'file')
+      continue;
+    if (!items[i].webkitGetAsEntry) {
+      showError('Entries in drag-and-drop not supported in your browser.');
+      break;
+    }
+    var file = items[i].getAsFile();
+    var entry = items[i].webkitGetAsEntry();
+    if (!entry)
+      continue;
+    entry.fileCache = file;
+    entry.isOpened = false;
+    entries.push(entry);
+    entriesToScan.push(entry);
+  }
+  return entries;
+}
+
+function createCheckboxElement(entry, file) {
+  var checkbox = document.createElement('input');
+  checkbox.type = 'checkbox';
+  checkbox.isImage = file.isImage;
+  if (entry.fullPath in selectedList)
+    checkbox.checked = selectedList[entry.fullPath].checked;
+  else
+    checkbox.checked = (!imageOnly.checked || checkbox.isImage) ? selectAll : false;
+  return checkbox;
+}
+
+function createIconElement(entry, file) {
+  var e = document.createElement('span');
+  e.classList.add('icon');
+  e.classList.add(entry.isDirectory ? 'dir' : 'file');
+  if (entry.isFile && file && file.type) {
+    var types = file.type.split('/');
+    entry.kind = types[0];
+    e.classList.add(types[0]);
+  }
+  return e;
+}
+
+function showFileAttribute(table, key, value) {
+  if (value == '' || value == null || value == undefined)
+    return;
+  var tr = document.createElement('tr');
+  var td = document.createElement('td');
+  td.innerText = key;
+  tr.appendChild(td);
+  td = document.createElement('td');
+  td.innerText = value;
+  tr.appendChild(td);
+  table.appendChild(tr);
+}
+
+function showFile(entry, file) {
+  var content = document.getElementById('content');
+  content.innerHTML = '';
+  if (content.revokeURL) {
+    webkitURL.revokeObjectURL(content.revokeURL);
+    content.revokeURL = '';
+  }
+
+  var table = document.createElement('table');
+  showFileAttribute(table, 'Path', entry.fullPath.substring(1));
+  showFileAttribute(table, 'Type', file.type);
+  showFileAttribute(table, 'Size', getSizeString(file.size));
+  showFileAttribute(table, 'Last Modified', file.lastModifiedDate);
+  content.appendChild(table);
+
+  if (entry.kind == 'text' ||
+      file.type == 'application/javascript' ||
+      file.type == 'application/x-javascript' ||
+      file.type == 'image/svg+xml') {
+    var iframe = document.createElement('iframe');
+    iframe.sandbox = '';
+    iframe.scrolling = 'no';
+    var textBlob = file.slice(0, 1024, 'text/plain');
+    iframe.src = webkitURL.createObjectURL(textBlob);
+    content.appendChild(iframe);
+    content.revokeURL = iframe.src;
+  } else if (entry.kind == 'image') {
+    var image = document.createElement('image');
+    image.src = webkitURL.createObjectURL(file);
+    image.onload = function() {
+      if (this.width >= content.offsetWidth - 10) {
+        var wscale = (content.offsetWidth - 10) / this.width;
+        this.width = this.width * wscale;
+        this.height = this.height * wscale;
+      }
+      content.appendChild(image);
+    };
+  } else {
+    var div = document.createElement('div');
+    div.classList.add('preview-unavailable');
+    div.innerText = 'Preview not available';
+    content.appendChild(div);
+  }
+  content.classList.remove('hide');
+}
+
+function createEntryHTML(parentList, entry, file, level) {
+  var checkbox;
+  var title = document.createElement('div');
+  title.classList.add('entry');
+  title.innerText = entry.name;
+  var icon = createIconElement(entry, file);
+  var li = document.createElement('li');
+  var div = document.createElement('div');
+  div.classList.add('clickable');
+  div.classList.add('entry-node');
+  if (entry.isFile) {
+    checkbox = createCheckboxElement(entry, file);
+    li.appendChild(checkbox);
+  }
+  div.appendChild(icon);
+  div.appendChild(title);
+  li.appendChild(div);
+  if (entry.isDirectory) {
+    div.onclick = function() {
+      if (!entry.isOpened) {
+        // Opens directory.
+        var ul = document.createElement('ul');
+        ul.id = entry.fullPath + '-child';
+        readDirectoryEntries(ul, entry, level);
+        li.appendChild(ul);
+      } else {
+        // Closes directory.
+        var ul = document.getElementById(entry.fullPath + '-child');
+        li.removeChild(ul);
+      }
+      icon.classList.toggle('open');
+      entry.isOpened = !entry.isOpened;
+    };
+    if (level < autoExpandLevel)
+      div.onclick();
+  } else {
+    var toggleCheckbox = handleCheckboxClick.bind(null, checkbox, entry, file);
+    div.addEventListener('mouseover', showFile.bind(null, entry, file));
+    div.addEventListener('click', function() {
+      checkbox.checked = !checkbox.checked;
+      toggleCheckbox();
+    });
+    checkbox.addEventListener('click', toggleCheckbox);
+  }
+  parentList.appendChild(li);
+}
+
+function readDirectoryEntries(parentList, parentDir, level) {
+  var r = parentDir.createReader();
+  var gotEntries = function(entries) {
+    if (entries.length == 0 || !parentDir.isOpened)
+      return;
+    for (var i = 0; i < entries.length; i++)
+      createChildEntryHTML(parentList, parentDir, entries[i], level+1);
+    r.readEntries(gotEntries, errorCallback('readEntries'));
+  };
+  r.readEntries(gotEntries, errorCallback('readEntries'));
+}
+
+function createChildEntryHTML(parentList, parentDir, entry, level) {
+  if (entry.isDirectory) {
+    createEntryHTML(parentList, entry, null, level);
+    return;
+  }
+  getEntryFile(entry, function(file) {
+    if (!parentDir.isOpened)
+      return;
+    createEntryHTML(parentList, entry, file, level);
+  }, errorCallback(entry.fullPath + '.file()'));
+}
+
+function getSizeString(size) {
+  if (size <= 1024) {
+    var bytes = size.toString().replace(/(?=(?!^)(?:\d{3})+(?!\d))/g, ',');
+    return bytes + ' bytes';
+  }
+  var unit = 0;
+  while (size > 1024 && unit < 5) {
+    size /= 1024;
+    unit++;
+  }
+  return size.toFixed(2) + ' ' + ['', 'K', 'M', 'G', 'T'][unit] + 'B';
+}
+
+function enableCancelScanning() {
+  var stop = document.getElementById('stop-button');
+  var resume = document.getElementById('resume-button');
+  stop.classList.remove('hide');
+  resume.classList.add('hide');
+  stop.addEventListener('click', function() {
+    scanStopped = true;
+    resume.classList.remove('hide');
+    stop.classList.add('hide');
+  });
+  resume.addEventListener('click', function() {
+    scanStopped = false;
+    resume.classList.add('hide');
+    stop.classList.remove('hide');
+    startScanEntries();
+  });
+}
+
+function updateSummary() {
+  document.getElementById('total-files').innerText = totalFiles;
+  document.getElementById('total-size').innerText = getSizeString(totalSize);
+  document.getElementById('selected-files').innerText = selectedFiles;
+  document.getElementById('selected-size').innerText = getSizeString(selectedSize);
+}
+
+function startScanEntries() {
+  if (scanStopped || scanFinished)
+    return;
+
+  // Dispatch 10 jobs at most.
+  for (var i = 0; i < 10 - pendingEntries && entriesToScan.length; ++i)
+    scanEntry(entriesToScan.shift());
+
+  webkitRequestAnimationFrame(startScanEntries);
+}
+
+function enableCancelScanning() {
+  var stop = document.getElementById('stop-button');
+  var resume = document.getElementById('resume-button');
+  stop.classList.remove('hide');
+  resume.classList.add('hide');
+  stop.addEventListener('click', function() {
+    scanStopped = true;
+    resume.classList.remove('hide');
+    stop.classList.add('hide');
+  });
+  resume.addEventListener('click', function() {
+    scanStopped = false;
+    resume.classList.add('hide');
+    stop.classList.remove('hide');
+    startScanEntries();
+  });
+}
+
+function scanEntry(entry) {
+  if (entry.isFile) {
+    pendingEntries++;
+    getEntryFile(entry, function (file) {
+      pendingEntries--;
+      totalFiles++;
+      totalSize += file.size;
+      if (selectAll) {
+        if (file.isImage) {
+          imageFiles++;
+          imageSize += file.size;
+        }
+        if (!imageOnly.checked || file.isImage) {
+          selectedFiles++;
+          selectedSize += file.size;
+        }
+      }
+      updateSummary();
+      checkIfScanFinished();
+    });
+    return;
+  }
+  var r = entry.createReader();
+  var gotEntries = function(entries) {
+    pendingEntries--;
+    if (entries.length == 0) {
+      checkIfScanFinished();
+      return;
+    }
+    for (var i = 0; i < entries.length; i++)
+      entriesToScan.push(entries[i]);
+    pendingEntries++;
+    r.readEntries(gotEntries, errorCallback('readEntries'));
+  };
+  pendingEntries++;
+  r.readEntries(gotEntries, errorCallback('readEntries'));
+}
+
+function checkIfScanFinished() {
+  if (pendingEntries == 0 && entriesToScan.length == 0) {
+    document.getElementById('stop-button').classList.add('hide');
+    document.getElementById('resume-button').classList.add('hide');
+    scanFinished = true;
+  }
+}
+
+document.getElementById('select-all').onclick = function() {
+  if (imageOnly.checked) {
+    selectedFiles = imageFiles;
+    selectedSize = imageSize;
+  } else {
+    selectedFiles = totalFiles;
+    selectedSize = totalSize;
+  }
+  selectedList = {};
+  selectAll = true;
+  var cbs = document.querySelectorAll('#file-list-body input[type=checkbox]');
+  for (var i = 0; i < cbs.length; ++i)
+    if (!imageOnly.checked || cbs[i].isImage)
+      cbs[i].checked = true;
+  updateSummary();
+};
+
+document.getElementById('select-none').onclick = function() {
+  selectedFiles = selectedSize = 0;
+  selectedList = {};
+  selectAll = false;
+  var cbs = document.querySelectorAll('#file-list-body input[type=checkbox]');
+  for (var i = 0; i < cbs.length; ++i)
+    cbs[i].checked = false;
+  updateSummary();
+};
+
+imageOnly.onclick = function() {
+  var cbs = document.querySelectorAll('#file-list-body input[type=checkbox]');
+  if (imageOnly.checked) {
+    selectedFiles = imageFiles;
+    selectedSize = imageSize;
+    for (var i = 0; i < cbs.length; ++i)
+      if (!cbs[i].isImage)
+        cbs[i].checked = false;
+    for (var path in selectedList) {
+      var f = selectedList[path];
+      if (!f.checked && file.isImage) {
+        selectedFiles--;
+        selectedSize -= f.file.size;
+      }
+    }
+    updateSummary();
+  }
+}
+
+function handleCheckboxClick(cb, entry, file) {
+  if (cb.checked) {
+    selectedFiles++;
+    selectedSize += file.size;
+    if (!file.isImage)
+      imageOnly.checked = false;
+  } else {
+    selectedFiles--;
+    selectedSize -= file.size;
+  }
+  selectedList[entry.fullPath] = {checked:cb.checked, file:file};
+  updateSummary();
+}
+
+</script>
+</body>

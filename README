@@ -1,10 +1,12 @@
 HTML5 File / FileSystem API Samples
 (Runs only on Chrome)
 
-* simple: Random samples
+* simple: Random samples of FileSystem API
 * editor: Simple offline image editor using File API + Canvas
+* picker: Folder picker demo with drag-and-drop powered by FileSystem API
 
 Resources:
+
   http://dev.w3.org/2006/webapi/FileAPI/
   - File API (Latest draft)
 
@@ -13,6 +15,9 @@ Resources:
 
   http://dev.w3.org/2009/dap/file-system/file-writer.html
   - FileWriter API (Latest draft)
+
+  http://wiki.whatwg.org/wiki/DragAndDropEntries
+  - Drag-and-drop using FileEntry and DirectoryEntry (Proposing draft)
 
 LICENSE:
 
