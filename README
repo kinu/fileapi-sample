@@ -1,7 +1,7 @@
 HTML5 File / FileSystem API Samples
 (Runs only on Chrome)
 
-* simple: Random samples of FileSystem API
+* simple: Random samples of File and FileSystem API
 * editor: Simple offline image editor using File API + Canvas
 * picker: Folder picker demo with drag-and-drop powered by FileSystem API
 
