@@ -1,0 +1,12 @@
+File API samples
+
+* filereader-text.html: FileReader Basic
+* inline-worker.html: Inline Worker using Blob
+
+FileSystem API samples (runs only on Chrome)
+
+* filesystem-basic.html: FileSystem API Basic
+* filesystem-dragout.html: FileSystem API + dragout
+* filesystem-worker.html: FileSystem API in Worker
+* filesystem-worker-sync.html: Synchronous FileSystem API in Worker
+
