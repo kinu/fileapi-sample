@@ -1,0 +1,20 @@
+<h1>Show text file contents using FileReader</h1>
+<form action="./test.cgi" method="get">
+    <input type="file" id="myFile" />
+    <input type="button" id="displayFileData" value="show file contents" />
+</form>
+<div id="result"></div>
+<script>
+  document.getElementById("displayFileData").addEventListener("click", function(){
+    var fileData = document.getElementById("myFile").files[0];
+    if (fileData.type != "text/plain") {
+      document.getElementById("result").innerHTML = "select a plain text file";
+      return;
+    }
+    var reader = new FileReader();
+    reader.onload = function(evt){
+      document.getElementById("result").innerHTML = evt.target.result;
+    }
+    reader.readAsText(fileData, "utf-8");
+  }, true);
+</script>

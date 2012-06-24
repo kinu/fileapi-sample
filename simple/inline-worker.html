@@ -1,0 +1,43 @@
+<body>
+<h1>Inline Worker using Blob</h1>
+<div>Worker script:</div>
+<pre id="workerScript" style="margin:20px; border:1px solid gray; padding:5px">
+onmessage = function(event) {
+  postMessage("Got message: " + event.data);
+};
+onerror = function(e) {
+    postMessage(e);
+};
+</pre>
+<input type="button" id="run" value="Run">
+<pre id="log"></pre>
+
+<script>
+var URL = window.URL || window.webkitURL || window.mozURL || window.msURL || window.oURL;
+var BlobBuilder = window.BlobBuilder || window.WebKitBlobBuilder || window.MozBlobBuilder || window.MSBlobBuilder || window.OBlobBuilder;
+
+function log(msg) {
+  document.getElementById("log").innerHTML += msg + "\n";
+}
+
+function getBlob(text) {
+  try {
+    // New recommended way to construct a Blob.
+    return new Blob([workerScript], {type:'application/javascript'});
+  } catch (ex) {
+    var builder = new BlobBuilder;
+    builder.append(text);
+    return builder.getBlob('application/javascript');
+  }
+}
+
+document.getElementById('run').onclick = function(e) {
+  log('Running worker using the script...');
+  var worker = new Worker(URL.createObjectURL(getBlob(document.getElementById('workerScript').innerText)));
+  worker.postMessage('Hello, worker!');
+  worker.onmessage = function(event) { log("Worker responded: " + event.data); };
+  worker.onerror = function(error) { log("ERROR: " + error); };
+}
+
+</script>
+</body>
